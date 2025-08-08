@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# Webpack output
+dist/
+
+# system files
+.DS_Store
+*.log
+
+# env vars (if any)
+.env
