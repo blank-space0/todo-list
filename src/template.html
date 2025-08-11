@@ -4,8 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"/>
 </head>
 <body>
-    
+    <header>
+        <div class="wrapper">
+            <span class="material-symbols-outlined checkmark">done_all</span>
+            <p class="title">Todo List</p>
+        </div>
+    </header>
+    <aside id="sidebar">
+        <h2>Projects</h2>
+        <nav arial-label="Project navigation bar">
+            <ul>
+                <li>
+                    <div class="style-help">
+                        <span class="material-symbols-outlined">checklist</span>
+                        <button type="button" class="project-swap">Project 1</button>
+                    </div>
+                    <button type="button" class="project-close">
+                        <span class="material-symbols-outlined">close_small</span>
+                    </button>
+                </li>
+                <li>
+                    <div class="style-help">
+                        <span class="material-symbols-outlined">checklist</span>
+                        <button type="button" class="project-swap">Project 1</button>
+                    </div>
+                    <button type="button" class="project-close">
+                        <span class="material-symbols-outlined">close_small</span>
+                    </button>
+                </li>
+                <li>
+                    <div class="style-help">
+                        <span class="material-symbols-outlined">checklist</span>
+                        <button type="button" class="project-swap">Project 1</button>
+                    </div>
+                    <button type="button" class="project-close">
+                        <span class="material-symbols-outlined">close_small</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        <button type="button" id="add-project">
+            <span class="material-symbols-outlined">add</span>
+            <p class="inner-text">Add Project</p>
+        </button>
+    </aside>
+    <main>
+        <h2>Inbox</h2>
+        <ul>
+            <li>
+                <div class="circle"></div>
+                <div class="proj-description">Task One</div>
+            </li>
+            <li>
+                <div class="circle"></div>
+                <div class="proj-description">Taske Two</div>
+            </li>
+            <li>
+                <div class="circle"></div>
+                <div class="proj-description">Task Three</div>
+            </li>
+        </ul>
+        <button type="button"> 
+            <span class="material-symbols-outlined">add</span>
+            <p>Add Task</p>
+        </button>
+    </main>
 </body>
 </html>
