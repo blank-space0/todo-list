@@ -57,7 +57,7 @@ header .title {
 
 .material-symbols-outlined.checkmark {
     font-size: 3rem; /* bigger icon */
-  }
+}
 
 /* ---------- Nav bar ----------*/
 
@@ -86,7 +86,7 @@ aside ul {
     border-radius: 1rem;
     background-color: var(--secondary-light);
     transition: filter 0.2s ease;
-    width: 10rem;
+    width: 12rem;
     overflow: hidden;
     padding: .5rem;
 }
@@ -129,12 +129,32 @@ aside ul {
 #add-project {
     padding: .5rem;
     border-radius: 1rem;
-    width: 10rem;
+    width: 13rem;
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: 10px;
     position: relative;
+}
+
+aside form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: .5rem;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+.sub-form, .clear-form {
+    width: 4rem;
+}
+
+.sub-form:hover, .clear-form:hover {
+    cursor: pointer;
 }
 
 
@@ -188,13 +208,12 @@ main .circle:hover {
     cursor: pointer;
 }
 
-
-main button {
+main .task-item, #add-task {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: 10px;
-    width: 10rem;
+    width: 100%rem;
     border: none;
     border-radius: 1rem;
     transition: filter 0.2s ease;
@@ -202,4 +221,20 @@ main button {
 
 main button:hover {
     filter: brightness(0.85);
+}
+
+#task-input {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.task-buttons {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.task-buttons button {
+    width: 5rem;
 }
