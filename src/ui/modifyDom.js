@@ -14,15 +14,15 @@ export class ModifyDom {
     }
 
     init() {
-        this.addProjectBtn.addEventListener("click", this.showProjectInput);
-        this.addTask.addEventListener("click", this.showTaskInput)
+        this.addProjectBtn?.addEventListener("click", this.showProjectInput);
+        this.addTask?.addEventListener("click", this.showTaskInput);
     }
 
     updateCache() {
         this.storage.cacheData(this.projectManager, this.currentProjectId);
     }
 
-    // we have to make this an arrow function so we dont loose this
+    // we have to make this an arrow function so we dont lose this
     showProjectInput = () => {
         const prevDisplay = this.addProjectBtn.dataset.prevDisplay || getComputedStyle(this.addProjectBtn).display;
         this.addProjectBtn.dataset.prevDisplay = prevDisplay;
@@ -32,7 +32,7 @@ export class ModifyDom {
 
         const label = document.createElement("label");
         label.htmlFor = "project-name";
-        label.setAttribute("aria-label", "Input project name");
+        label.textContent = "Project name";
 
         const input = document.createElement("input");
         input.id = "project-name";
@@ -40,8 +40,9 @@ export class ModifyDom {
         input.className = "project-input";
         input.name = "project-name";
         input.minLength = 1;
-        input.maxLength = 10;
+        input.maxLength = 20;
         input.required = true;
+        input.setAttribute("aria-label", "Project name");
 
         const btnContainer = document.createElement("div");
         const subBtn = document.createElement("button");
@@ -58,23 +59,26 @@ export class ModifyDom {
         btnContainer.append(subBtn, clearBtn);
         form.append(label, input, btnContainer);
 
-        this.addProjectBtn.insertAdjacentElement("beforebegin", form); // put the form in its place
-        input.focus(); // brings into focus so user can just start typing without clicking on it
+        this.addProjectBtn.insertAdjacentElement("beforebegin", form);
+        input.focus();
 
         const cleanup = () => {
             form.remove();
             this.addProjectBtn.style.display = prevDisplay;
-        }
+        };
 
         form.addEventListener("submit", (e) => {
             e.preventDefault();
+            if (!form.reportValidity()) {
+                return;
+            }
+            
             const name = input.value.trim();
             this.addNewProject(name);
             cleanup();
         });
 
         clearBtn.addEventListener("click", cleanup);
-
     };
 
     showTaskInput = () => {
@@ -92,15 +96,16 @@ export class ModifyDom {
         form.id = "task-form";
 
         label.htmlFor = "task-input";
-        label.setAttribute("aria-label", "Input your task here");
+        label.textContent = "Task description";
 
         input.type = "text";
         input.name = "task-description";
         input.id = "task-input";
         input.minLength = 1;
-        input.maxLength = 50;
+        input.maxLength = 150;
         input.required = true;
-        
+        input.setAttribute("aria-label", "Task description");
+
         btnContainer.className = "task-buttons";
 
         submitBtn.type = "submit";
@@ -124,30 +129,37 @@ export class ModifyDom {
 
         form.addEventListener("submit", (e) => {
             e.preventDefault();
+            if (!form.reportValidity()) return;
             const description = input.value.trim();
             this.addNewTask(description);
             cleanup();
         });
 
         clearBtn.addEventListener("click", cleanup);
-
     };
 
-    addNewProject(name) {
-        const ulParent = document.querySelector(".nav-list")
-        const liElement = document.createElement("li")
+    addNewProject(name, passId = null, reHydrate = false) {
+        const ulParent = document.querySelector(".nav-list");
+        if (!ulParent) return;
+
+        const liElement = document.createElement("li");
         const projBox = document.createElement("div");
         const checkImg = document.createElement("span");
-        const projSwap = document.createElement("button"); // will need to add event listner to delete later
+        const projSwap = document.createElement("button");
         const projRemove = document.createElement("button");
         const removeImg = document.createElement("span");
 
         // actually add the project to our ProjectManager
-        let newProject = new Project(name, crypto.randomUUID());
-        projSwap.dataset.id = newProject.id; 
+        const newProjectId = passId ? passId : crypto.randomUUID();
+        const newProject = new Project(name, newProjectId);
+        projSwap.dataset.id = newProject.id;
         this.projectManager.addProject(newProject);
-        this.swapProjectId(newProject.id); // make this the current project in focus on creation
-        this.populateTaskList(newProject.id);
+
+        // on normal flow, focus the new project and render; skip during hydration
+        if (!reHydrate) {
+            this.swapProjectId(newProject.id); // persists
+            this.populateTaskList(newProject.id);
+        }
 
         projBox.className = "style-help";
 
@@ -157,10 +169,10 @@ export class ModifyDom {
         projSwap.type = "button";
         projSwap.className = "project-swap";
         projSwap.textContent = name;
-        projSwap.addEventListener("click", () => { 
-            this.swapProjectId(newProject.id); // brings whatever project we click into focus
-            this.populateTaskList(newProject.id) 
-        }); // some method that switches our project tabs for us
+        projSwap.addEventListener("click", () => {
+            this.swapProjectId(newProject.id); // brings whatever project we click into focus (persists)
+            this.populateTaskList(newProject.id);
+        });
 
         projBox.append(checkImg, projSwap);
 
@@ -174,71 +186,80 @@ export class ModifyDom {
         liElement.append(projBox, projRemove);
         ulParent.appendChild(liElement);
 
-        projRemove.addEventListener("click", () => { 
-            const wasCurrent = this.currentProjectId === newProject.id; 
-            this.removeProject(liElement, newProject.id) 
+        projRemove.addEventListener("click", () => {
+            const wasCurrent = this.currentProjectId === newProject.id;
+            this.removeProject(liElement, newProject.id);
 
             if (!wasCurrent) {
+                // projects changed, but current pointer didn't; still persist
+                this.updateCache();
                 return;
             }
 
-            // check to see if we have another project, just switch to the very first one we have
+            // choose a new current project (first available) or clear
             const projectList = this.projectManager.get();
-
             if (Object.keys(projectList).length > 0) {
                 const first = Object.values(projectList)[0];
                 this.currentProjectId = first.id;
                 this.populateTaskList(this.currentProjectId);
-
             } else {
                 this.currentProjectId = null;
                 const taskList = document.getElementById("task-list");
-                taskList?.replaceChildren(); // call this if taskList is not null
+                taskList?.replaceChildren();
             }
-            
-        }); 
+            // persist after all mutations
+            this.updateCache();
+        });
 
-        // update on project add
-        this.updateCache();
+        // no extra write here; swapProjectId handled persistence for non-hydration flow
     }
 
-    addNewTask(description) {
-        // add task to the collection of the current project
-        // then just call populateTaskList with the current id of the proj.
+    addNewTask(description, taskId = null, reHydrate = false) {
         const currId = this.currentProjectId;
         if (!currId) {
             alert("Must create a project first before adding a task!");
             return;
         }
 
-        this.projectManager.projects[currId].collection.addTask(description);
-        this.populateTaskList(currId);
-        // update cache on task add
-        this.updateCache();
+        if (!taskId) {
+            this.projectManager.projects[currId].collection.addTask(description);
+        } else {
+            this.projectManager.projects[currId].collection.addTask(description, taskId);
+        }
+
+        // avoid UI thrash during hydration; render once at the end of repopulate
+        if (!reHydrate) {
+            this.populateTaskList(currId);
+            this.updateCache();
+        }
     }
 
     removeProject(liElement, id) {
         liElement.remove();
         this.projectManager.removeProject(id);
-        // update cache on remove
-        this.updateCache();
     }
 
     removeTask(liElement, taskId) {
         const currProj = this.currentProjectId;
         this.projectManager.projects[currProj].collection.removeTask(taskId);
         liElement.remove();
-        // update the cache on task remove
         this.updateCache();
     }
 
-    swapProjectId(id) {
+    swapProjectId(id, persist = true) {
         this.currentProjectId = id;
+        if (persist) {
+            this.updateCache();
+        }
     }
 
     populateTaskList(id) {
-        const tasks = this.projectManager.projects[id].collection.listTasks(); // get all the tasks as an array
         const taskList = document.getElementById("task-list");
+        if (!taskList) {
+            return;
+        }
+
+        const tasks = this.projectManager.projects[id].collection.listTasks();
         taskList.replaceChildren();
 
         for (const task of tasks) {
@@ -258,11 +279,8 @@ export class ModifyDom {
         liElement.append(circle, description);
         taskList.appendChild(liElement);
 
-        // add event listener to remove task if user clicks on the circle!
         circle.addEventListener("click", () => {
             this.removeTask(liElement, task.id);
         });
     }
-
 }
-

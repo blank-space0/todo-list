@@ -7,11 +7,11 @@ export class TaskCollection {
         this.#tasks = {};
     }
 
-    addTask(notes) {
-        const id = crypto.randomUUID();
-        const task = new Task(id, notes);
-        this.#tasks[id] = task;
-        return id; 
+    addTask(notes, id = null) {
+        const newId = id ? id : crypto.randomUUID();
+        const task = new Task(newId, notes);
+        this.#tasks[newId] = task;
+        return newId; 
     }
 
     removeTask(id) {
@@ -24,10 +24,6 @@ export class TaskCollection {
 
     getTask(id) {
         return this.#tasks[id] ?? null; 
-    }
-
-    setTask(id, notes) {
-        this.#tasks[id] = notes;
     }
 
     listTasks() {

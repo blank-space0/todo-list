@@ -12,7 +12,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "This is a template for npm + webpack builds\r Clone this, and then just run npm install to \r install all the dependencies from the package.json file.",
   "devDependencies": {
     "css-loader": "^7.1.2",
     "html-loader": "^5.1.0",
@@ -22,5 +22,13 @@
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2",
     "webpack-merge": "^6.0.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blank-space0/todo-list.git"
+  },
+  "bugs": {
+    "url": "https://github.com/blank-space0/todo-list/issues"
+  },
+  "homepage": "https://github.com/blank-space0/todo-list#readme"
 }

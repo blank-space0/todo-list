@@ -1,37 +1,84 @@
 export class StorageService {
-    constructor() {
-        
-    }
-
     cacheData(projectManager, currentProjectId) {
-        // session storage only stores strings
-        // convert to string first
-        // convert the projectCollection
-        // then for each project, we need to convert its task list as well
         const writeData = {"currentProjectId": currentProjectId};
         let projectList = [];
 
-        for (const [k, project] of Object.entries(projectManager.projects)) {
-            let currProj = {};
-            currProj["id"] = project.id;
-            currProj["name"] = project.name;
-            
-            let tasks = project.collection.listTasks();
-            let inner = [];
+        for (const project of Object.values(projectManager.projects)) {
+            const currProj = {
+                id: project.id,
+                name: project.name,
+                tasks: []
+            };
+
+            const tasks = project?.collection?.listTasks?.() || [];
             for (const task of tasks) {
-                let obj = {id: task.id,  notes: task.notes};
-                inner.push(obj);
+                currProj.tasks.push({
+                    id: task.id,
+                    notes: task.notes
+                });
             }
 
-            currProj.tasks = inner;
             projectList.push(currProj)
         }
 
         writeData["projects"] = projectList;
-        const writeStr = JSON.stringify(writeData);
-        sessionStorage.setItem("myProjects", writeStr);
-        let check = sessionStorage.getItem("myProjects");
-        console.log(check);
-    } 
+        sessionStorage.setItem("myProjects", JSON.stringify(writeData));
 
+        // debugging only
+        this.downloadCache(true);
+    }
+    
+    downloadCache(log = false) {
+        const readData = sessionStorage.getItem("myProjects");
+        if (!readData) {
+            return null;
+        }
+
+        // might not be valid json, lets check
+        try {
+            const parsed = JSON.parse(readData);
+            if (log) {
+                console.log(JSON.stringify(parsed, null, 2));
+            }
+
+            return parsed;
+        } catch (exception) {
+            console.warn("Invalid cache:", exception);
+            return null;
+        }
+    }
+
+    repopulate(cache, app) {
+        // check if we have a cache, or if we have any projects to populate it
+        if (!cache || !Array.isArray(cache.projects)) {
+            return;
+        }
+
+        const rehydrate = true;
+        for (const project of cache.projects) {
+            const name = project.name;
+            const id = project.id;
+            app.addNewProject(name, id, rehydrate)
+            app.swapProjectId(id, false);
+            
+            for (const task of project.tasks) {
+                const taskId = task.id;
+                const notes = task.notes;
+                app.addNewTask(notes, taskId, rehydrate);
+            }
+        }
+
+        const exists = cache.currentProjectId && app.projectManager.projects[cache.currentProjectId];
+        app.currentProjectId = exists
+            ? cache.currentProjectId
+            : Object.values(app.projectManager.projects)[0]?.id ?? null;
+
+        if (app.currentProjectId) {
+            app.populateTaskList(app.currentProjectId);
+        } else {
+            document.getElementById("task-list")?.replaceChildren();
+        }
+
+        app.updateCache();
+    }
 }

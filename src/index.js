@@ -1,8 +1,15 @@
 import "./styles.css";
-import { ModifyDom } from ".//ui/modifyDom.js";
+import { ModifyDom } from "./ui/modifyDom.js";
+import { StorageService } from "./utils/storageService.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const start = new ModifyDom();
+    const cache = new StorageService();
+    const load = cache.downloadCache(true);
+    const app = new ModifyDom();
+
+    if (cache) {
+        cache.repopulate(load, app);
+    }
 });
 
 
