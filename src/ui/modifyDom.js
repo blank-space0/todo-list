@@ -1,6 +1,6 @@
-import { TaskCollection } from "../models/taskCollection.js";
 import { ProjectManager } from "../models/projectManager.js";
 import { Project } from "../models/project.js";
+import { StorageService } from "../utils/storageService.js";
 
 export class ModifyDom {
     constructor() {
@@ -8,6 +8,7 @@ export class ModifyDom {
         this.addTask = document.getElementById("add-task");
         this.projectManager = new ProjectManager();
         this.currentProjectId = null;
+        this.storage = new StorageService();
 
         this.init();
     }
@@ -15,6 +16,10 @@ export class ModifyDom {
     init() {
         this.addProjectBtn.addEventListener("click", this.showProjectInput);
         this.addTask.addEventListener("click", this.showTaskInput)
+    }
+
+    updateCache() {
+        this.storage.cacheData(this.projectManager, this.currentProjectId);
     }
 
     // we have to make this an arrow function so we dont loose this
@@ -72,93 +77,6 @@ export class ModifyDom {
 
     };
 
-    addNewProject(name) {
-        const ulParent = document.querySelector(".nav-list")
-        const liElement = document.createElement("li")
-        const projBox = document.createElement("div");
-        const checkImg = document.createElement("span");
-        const projSwap = document.createElement("button"); // will need to add event listner to delete later
-        const projRemove = document.createElement("button");
-        const removeImg = document.createElement("span");
-
-        // actually add the project to our ProjectManager
-        let newProject = new Project(name, crypto.randomUUID());
-        projSwap.dataset.id = newProject.id; // click on the actual project itself to get the ID
-        this.projectManager.addProject(newProject);
-        this.currentProjectId = newProject.id;
-        this.populateTaskList(newProject.id);
-
-        projBox.className = "style-help";
-
-        checkImg.className = "material-symbols-outlined";
-        checkImg.textContent = "checklist";
-
-        projSwap.type = "button";
-        projSwap.className = "project-swap";
-        projSwap.textContent = name;
-        projSwap.addEventListener("click", () => { 
-            this.currentProjectId = newProject.id; // keep the state of what our current project is
-            this.populateTaskList(newProject.id) 
-        }); // some method that switches our project tabs for us
-
-        projBox.append(checkImg, projSwap);
-
-        projRemove.type = "button";
-        projRemove.className = "project-close";
-
-        removeImg.className = "material-symbols-outlined";
-        removeImg.textContent = "close_small";
-
-        projRemove.appendChild(removeImg);
-        liElement.append(projBox, projRemove);
-        ulParent.appendChild(liElement);
-
-        projRemove.addEventListener("click", () => { 
-            const wasCurrent = this.currentProjectId === newProject.id;
-            this.removeProject(liElement, newProject.id) 
-            if (wasCurrent) {
-                this.currentProjectId = null;
-                const taskList = document.getElementById("task-list");
-                taskList?.replaceChildren(); // call this if taskList is not null
-            }
-        }); 
-    }
-
-    removeProject(liElement, id) {
-        liElement.remove();
-        this.projectManager.removeProject(id);
-    }
-
-    populateTaskList(id) {
-        const tasks = this.projectManager.projects[id].collection.listTasks(); // get all the tasks as an array
-        const taskList = document.getElementById("task-list");
-        taskList.replaceChildren();
-
-        for (const task of tasks) {
-            this.createTaskElement(task, taskList);
-        }
-    }
-
-    createTaskElement(task, taskList) {
-        const liElement = document.createElement("li");
-        const circle = document.createElement("div");
-        const description = document.createElement("div");
-
-        circle.className = "circle";
-        description.className = "proj-description";
-        description.textContent = task.notes;
-
-        liElement.append(circle, description);
-        taskList.appendChild(liElement);
-
-        // add event listener to remove task if user clicks on the circle!
-        circle.addEventListener("click", () => {
-            const currProj = this.currentProjectId;
-            this.projectManager.projects[currProj].collection.removeTask(task.id);
-            liElement.remove();
-        });
-    }
-
     showTaskInput = () => {
         const prevDisplay = this.addTask.dataset.prevDisplay || getComputedStyle(this.addTask).display;
         this.addTask.dataset.prevDisplay = prevDisplay;
@@ -215,6 +133,75 @@ export class ModifyDom {
 
     };
 
+    addNewProject(name) {
+        const ulParent = document.querySelector(".nav-list")
+        const liElement = document.createElement("li")
+        const projBox = document.createElement("div");
+        const checkImg = document.createElement("span");
+        const projSwap = document.createElement("button"); // will need to add event listner to delete later
+        const projRemove = document.createElement("button");
+        const removeImg = document.createElement("span");
+
+        // actually add the project to our ProjectManager
+        let newProject = new Project(name, crypto.randomUUID());
+        projSwap.dataset.id = newProject.id; 
+        this.projectManager.addProject(newProject);
+        this.swapProjectId(newProject.id); // make this the current project in focus on creation
+        this.populateTaskList(newProject.id);
+
+        projBox.className = "style-help";
+
+        checkImg.className = "material-symbols-outlined";
+        checkImg.textContent = "checklist";
+
+        projSwap.type = "button";
+        projSwap.className = "project-swap";
+        projSwap.textContent = name;
+        projSwap.addEventListener("click", () => { 
+            this.swapProjectId(newProject.id); // brings whatever project we click into focus
+            this.populateTaskList(newProject.id) 
+        }); // some method that switches our project tabs for us
+
+        projBox.append(checkImg, projSwap);
+
+        projRemove.type = "button";
+        projRemove.className = "project-close";
+
+        removeImg.className = "material-symbols-outlined";
+        removeImg.textContent = "close_small";
+
+        projRemove.appendChild(removeImg);
+        liElement.append(projBox, projRemove);
+        ulParent.appendChild(liElement);
+
+        projRemove.addEventListener("click", () => { 
+            const wasCurrent = this.currentProjectId === newProject.id; 
+            this.removeProject(liElement, newProject.id) 
+
+            if (!wasCurrent) {
+                return;
+            }
+
+            // check to see if we have another project, just switch to the very first one we have
+            const projectList = this.projectManager.get();
+
+            if (Object.keys(projectList).length > 0) {
+                const first = Object.values(projectList)[0];
+                this.currentProjectId = first.id;
+                this.populateTaskList(this.currentProjectId);
+
+            } else {
+                this.currentProjectId = null;
+                const taskList = document.getElementById("task-list");
+                taskList?.replaceChildren(); // call this if taskList is not null
+            }
+            
+        }); 
+
+        // update on project add
+        this.updateCache();
+    }
+
     addNewTask(description) {
         // add task to the collection of the current project
         // then just call populateTaskList with the current id of the proj.
@@ -226,5 +213,56 @@ export class ModifyDom {
 
         this.projectManager.projects[currId].collection.addTask(description);
         this.populateTaskList(currId);
+        // update cache on task add
+        this.updateCache();
     }
+
+    removeProject(liElement, id) {
+        liElement.remove();
+        this.projectManager.removeProject(id);
+        // update cache on remove
+        this.updateCache();
+    }
+
+    removeTask(liElement, taskId) {
+        const currProj = this.currentProjectId;
+        this.projectManager.projects[currProj].collection.removeTask(taskId);
+        liElement.remove();
+        // update the cache on task remove
+        this.updateCache();
+    }
+
+    swapProjectId(id) {
+        this.currentProjectId = id;
+    }
+
+    populateTaskList(id) {
+        const tasks = this.projectManager.projects[id].collection.listTasks(); // get all the tasks as an array
+        const taskList = document.getElementById("task-list");
+        taskList.replaceChildren();
+
+        for (const task of tasks) {
+            this.createTaskElement(task, taskList);
+        }
+    }
+
+    createTaskElement(task, taskList) {
+        const liElement = document.createElement("li");
+        const circle = document.createElement("div");
+        const description = document.createElement("div");
+
+        circle.className = "circle";
+        description.className = "proj-description";
+        description.textContent = task.notes;
+
+        liElement.append(circle, description);
+        taskList.appendChild(liElement);
+
+        // add event listener to remove task if user clicks on the circle!
+        circle.addEventListener("click", () => {
+            this.removeTask(liElement, task.id);
+        });
+    }
+
 }
+

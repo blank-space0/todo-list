@@ -26,6 +26,10 @@ export class TaskCollection {
         return this.#tasks[id] ?? null; 
     }
 
+    setTask(id, notes) {
+        this.#tasks[id] = notes;
+    }
+
     listTasks() {
         return Object.values(this.#tasks); 
     }
